@@ -2,7 +2,6 @@ package com.test_task.jetbrains_internship_test_task.server.service;
 
 import com.test_task.jetbrains_internship_test_task.entity.StoredQuery;
 import com.test_task.jetbrains_internship_test_task.server.repository.StoredQueryRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,7 +14,6 @@ public class StoredQueryService {
 
     private final StoredQueryRepository queryRepository;
 
-    @Autowired
     public StoredQueryService(StoredQueryRepository queryRepository) {
         this.queryRepository = queryRepository;
     }
