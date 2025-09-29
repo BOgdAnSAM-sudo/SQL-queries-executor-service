@@ -1,8 +1,11 @@
 DROP TABLE IF EXISTS StoredQueries;
+DROP TABLE IF EXISTS Titanic;
 
 CREATE TABLE StoredQueries
 (
     id INT PRIMARY KEY AUTO_INCREMENT,
     query   VARCHAR NOT NULL,
-    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE Titanic AS SELECT * FROM CSVREAD('src/main/resources/static/titanic.csv');

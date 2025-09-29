@@ -1,0 +1,1 @@
+INSERT INTO Titanic SELECT * FROM CSVREAD('src/main/resources/static/titanic.csv');
