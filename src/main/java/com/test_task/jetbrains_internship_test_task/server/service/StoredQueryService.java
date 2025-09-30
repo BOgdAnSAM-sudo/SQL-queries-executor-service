@@ -19,7 +19,7 @@ public class StoredQueryService {
     }
 
     public StoredQuery addQuery(String query) throws StoredQueryException {
-        if (query == null) {
+        if (query == null || query.trim().isEmpty()) {
             throw new StoredQueryException("Query cannot be null");
         }
         StoredQuery newQuery = new StoredQuery(query);
