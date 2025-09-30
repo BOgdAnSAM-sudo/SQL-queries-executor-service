@@ -42,7 +42,7 @@ public class QueryController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/execute")
+    @GetMapping("/execute_query")
     public ResponseEntity<List<List<Object>>> executeQuery(@RequestBody String query) {
         List<List<Object>> result = executionService.executeQuery(query);
         return ResponseEntity.ok(result);
