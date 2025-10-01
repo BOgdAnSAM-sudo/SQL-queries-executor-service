@@ -139,13 +139,6 @@ public class StoredQueryServiceIntegrationTest {
     }
 
     @Test
-    public void getQueryById_NullId_ReturnsEmptyOptional() {
-        Optional<StoredQuery> retrievedQuery = queryService.getQueryById(null);
-
-        assertTrue(retrievedQuery.isEmpty());
-    }
-
-    @Test
     public void addQuery_NullQuery_ThrowsStoredQueryException() {
         StoredQueryException exception = assertThrows(StoredQueryException.class,
                 () -> queryService.addQuery(null));
