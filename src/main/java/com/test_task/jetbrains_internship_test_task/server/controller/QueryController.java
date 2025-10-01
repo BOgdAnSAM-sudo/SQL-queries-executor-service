@@ -3,6 +3,7 @@ package com.test_task.jetbrains_internship_test_task.server.controller;
 import com.test_task.jetbrains_internship_test_task.entity.StoredQuery;
 import com.test_task.jetbrains_internship_test_task.server.service.QueryExecutionService;
 import com.test_task.jetbrains_internship_test_task.server.service.StoredQueryService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +23,7 @@ public class QueryController {
         this.executionService = executionService;
     }
 
-    @PostMapping("/queries")
+    @PostMapping(value = "/queries", consumes = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<Map<String, Long>> storeQuery(@RequestBody String query) {
         StoredQuery storedQuery = queryService.addQuery(query);
         Map<String, Long> response = new HashMap<>();
@@ -42,9 +43,4 @@ public class QueryController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/execute_query")
-    public ResponseEntity<List<List<Object>>> executeQuery(@RequestBody String query) {
-        List<List<Object>> result = executionService.executeQuery(query);
-        return ResponseEntity.ok(result);
-    }
 }
