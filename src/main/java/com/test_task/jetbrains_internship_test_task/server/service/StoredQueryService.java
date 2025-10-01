@@ -13,15 +13,20 @@ import java.util.Optional;
 public class StoredQueryService {
 
     private final StoredQueryRepository queryRepository;
+    private final QueryValidationService validationService;
 
-    public StoredQueryService(StoredQueryRepository queryRepository) {
+    public StoredQueryService(StoredQueryRepository queryRepository, QueryValidationService validationService) {
         this.queryRepository = queryRepository;
+        this.validationService = validationService;
     }
 
     public StoredQuery addQuery(String query) throws StoredQueryException {
         if (query == null || query.trim().isEmpty()) {
             throw new StoredQueryException("Query cannot be null");
         }
+
+        validationService.validateQuery(query);
+
         StoredQuery newQuery = new StoredQuery(query);
         return queryRepository.save(newQuery);
     }
