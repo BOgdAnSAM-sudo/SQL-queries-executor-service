@@ -32,9 +32,6 @@ public class QueryExecutionService {
 
     public List<List<Object>> executeQueryById(Long id){
         Optional<StoredQuery> storedQuery = storedQueryService.getQueryById(id);
-        if (!storedQuery.isPresent())
-            return null;
-
-        return executeQuery(storedQuery.get().getQuery());
+        return storedQuery.map(query -> executeQuery(query.getQuery())).orElse(null);
     }
 }
