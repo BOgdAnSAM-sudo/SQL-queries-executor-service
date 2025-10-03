@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface QueryExecutionJobRepository extends JpaRepository<QueryExecutionJob, UUID> {
+public interface QueryExecutionJobRepository extends JpaRepository<QueryExecutionJob, Long> {
 }

@@ -28,7 +28,7 @@ public class QueryExecutionService {
 
     @Async
     @Transactional
-    public void executeQuery(UUID jobId, String query) {
+    public void executeQuery(Long jobId, String query) {
         QueryExecutionJob job = jobRepository.findById(jobId).orElseThrow();
         job.setStatus(QueryExecutionJob.JobStatus.RUNNING);
         jobRepository.save(job);

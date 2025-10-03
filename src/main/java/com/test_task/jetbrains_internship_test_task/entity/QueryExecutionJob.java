@@ -1,7 +1,6 @@
 package com.test_task.jetbrains_internship_test_task.entity;
 // Using JPA for persistence, even with an in-memory H2 database.
 import jakarta.persistence.*;
-import java.util.UUID;
 
 @Entity
 public class QueryExecutionJob {
@@ -14,7 +13,7 @@ public class QueryExecutionJob {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private UUID id;
+    private Long id;
 
     private Long sourceQueryId;
 
@@ -58,11 +57,11 @@ public class QueryExecutionJob {
         this.sourceQueryId = sourceQueryId;
     }
 
-    public UUID getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(UUID id) {
+    public void setId(Long id) {
         this.id = id;
     }
 }
