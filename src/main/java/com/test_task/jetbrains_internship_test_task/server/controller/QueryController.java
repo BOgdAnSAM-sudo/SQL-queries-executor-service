@@ -51,7 +51,7 @@ public class QueryController {
         newJob.setStatus(QueryExecutionJob.JobStatus.PENDING);
         QueryExecutionJob savedJob = jobRepository.save(newJob);
 
-        executionService.executeQuery(savedJob.getId(), query.getQuery());
+        executionService.executeQuery(savedJob.getId());
 
         // Create the response body
         Map<String, Object> response = Map.of(

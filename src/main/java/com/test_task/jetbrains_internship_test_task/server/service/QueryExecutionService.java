@@ -2,6 +2,7 @@ package com.test_task.jetbrains_internship_test_task.server.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.test_task.jetbrains_internship_test_task.entity.QueryExecutionJob;
+import com.test_task.jetbrains_internship_test_task.entity.StoredQuery;
 import com.test_task.jetbrains_internship_test_task.server.repository.QueryExecutionJobRepository;
 import com.test_task.jetbrains_internship_test_task.server.repository.QueryExecutionRepository;
 import jakarta.transaction.Transactional;
@@ -10,7 +11,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.Optional;
+
+import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
 
 @Service
 public class QueryExecutionService {
@@ -18,20 +21,24 @@ public class QueryExecutionService {
     private final QueryExecutionRepository queryExecutionRepository;
     private final QueryExecutionJobRepository jobRepository;
     private final ObjectMapper objectMapper;
+    private final StoredQueryService storedQueryService;
 
-    public QueryExecutionService(QueryExecutionRepository queryExecutionRepository, QueryExecutionJobRepository jobRepository, ObjectMapper objectMapper) {
+    public QueryExecutionService(QueryExecutionRepository queryExecutionRepository, QueryExecutionJobRepository jobRepository, ObjectMapper objectMapper, StoredQueryService storedQueryService) {
         this.queryExecutionRepository = queryExecutionRepository;
         this.jobRepository = jobRepository;
         this.objectMapper = objectMapper;
+        this.storedQueryService = storedQueryService;
     }
 
 
     @Async
     @Transactional
-    public void executeQuery(Long jobId, String query) {
+    public void executeQuery(Long jobId) {
         QueryExecutionJob job = jobRepository.findById(jobId).orElseThrow();
         job.setStatus(QueryExecutionJob.JobStatus.RUNNING);
         jobRepository.save(job);
+        Optional<StoredQuery> storedQuery = storedQueryService.getQueryById(job.getSourceQueryId());
+        String query = storedQuery.map(StoredQuery::getQuery).orElse(null);
 
         try {
             List<Map<String, Object>> queryResult = queryExecutionRepository.executeNativeQuery(query);
