@@ -37,8 +37,18 @@ public class QueryExecutionService {
         QueryExecutionJob job = jobRepository.findById(jobId).orElseThrow();
         job.setStatus(QueryExecutionJob.JobStatus.RUNNING);
         jobRepository.save(job);
+
         Optional<StoredQuery> storedQuery = storedQueryService.getQueryById(job.getSourceQueryId());
-        String query = storedQuery.map(StoredQuery::getQuery).orElse(null);
+
+        if (storedQuery.isEmpty()) {
+            String errorMessage = "Source query not found with ID: " + job.getSourceQueryId();
+            job.setStatus(QueryExecutionJob.JobStatus.FAILED);
+            job.setErrorMessage(errorMessage);
+            jobRepository.save(job);
+            throw new RuntimeException(errorMessage);
+        }
+
+        String query = storedQuery.get().getQuery();
 
         try {
             List<Map<String, Object>> queryResult = queryExecutionRepository.executeNativeQuery(query);
