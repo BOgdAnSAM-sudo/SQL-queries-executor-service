@@ -1,27 +1,56 @@
 package com.test_task.jetbrains_internship_test_task.server.service;
 
-import com.test_task.jetbrains_internship_test_task.entity.StoredQuery;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.test_task.jetbrains_internship_test_task.entity.QueryExecutionJob;
+import com.test_task.jetbrains_internship_test_task.server.repository.QueryExecutionJobRepository;
 import com.test_task.jetbrains_internship_test_task.server.repository.QueryExecutionRepository;
+import jakarta.transaction.Transactional;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class QueryExecutionService {
 
     private final QueryExecutionRepository queryExecutionRepository;
-    private final StoredQueryService storedQueryService;
+    private final QueryExecutionJobRepository jobRepository;
+    private final ObjectMapper objectMapper;
 
-    public QueryExecutionService(QueryExecutionRepository queryExecutionRepository, StoredQueryService storedQueryService) {
+    public QueryExecutionService(QueryExecutionRepository queryExecutionRepository, QueryExecutionJobRepository jobRepository, ObjectMapper objectMapper) {
         this.queryExecutionRepository = queryExecutionRepository;
-        this.storedQueryService = storedQueryService;
+        this.jobRepository = jobRepository;
+        this.objectMapper = objectMapper;
     }
 
-    public List<List<Object>> executeQuery(String query) {
-        List<Map<String, Object>> result = queryExecutionRepository.executeNativeQuery(query);
-        return convertResultToList(result);
+
+    @Async
+    @Transactional
+    public void executeQuery(UUID jobId, String query) {
+        QueryExecutionJob job = jobRepository.findById(jobId).orElseThrow();
+        job.setStatus(QueryExecutionJob.JobStatus.RUNNING);
+        jobRepository.save(job);
+
+        try {
+            List<Map<String, Object>> queryResult = queryExecutionRepository.executeNativeQuery(query);
+
+            List<List<Object>> formattedResult = convertResultToList(queryResult);
+
+//            Store the result as a JSON string
+            String resultJson = objectMapper.writeValueAsString(formattedResult);
+
+            job.setResult(resultJson);
+            job.setStatus(QueryExecutionJob.JobStatus.COMPLETED);
+
+        } catch (Exception e) {
+//            If anything goes wrong, mark as FAILED
+            job.setStatus(QueryExecutionJob.JobStatus.FAILED);
+            job.setErrorMessage(e.getMessage());
+        }
+
+        jobRepository.save(job);
     }
 
     private List<List<Object>> convertResultToList(List<Map<String, Object>> result) {
@@ -30,8 +59,4 @@ public class QueryExecutionService {
                 .toList();
     }
 
-    public List<List<Object>> executeQueryById(Long id){
-        Optional<StoredQuery> storedQuery = storedQueryService.getQueryById(id);
-        return storedQuery.map(query -> executeQuery(query.getQuery())).orElse(null);
-    }
 }
