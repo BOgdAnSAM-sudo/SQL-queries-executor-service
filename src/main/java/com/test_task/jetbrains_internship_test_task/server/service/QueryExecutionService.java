@@ -3,11 +3,10 @@ package com.test_task.jetbrains_internship_test_task.server.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.test_task.jetbrains_internship_test_task.entity.QueryExecutionJob;
 import com.test_task.jetbrains_internship_test_task.entity.StoredQuery;
-import com.test_task.jetbrains_internship_test_task.server.repository.QueryExecutionJobRepository;
 import com.test_task.jetbrains_internship_test_task.server.repository.QueryExecutionRepository;
-import jakarta.transaction.Transactional;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -17,22 +16,21 @@ import java.util.Optional;
 public class QueryExecutionService {
 
     private final QueryExecutionRepository queryExecutionRepository;
-    private final QueryExecutionJobRepository jobRepository;
     private final ObjectMapper objectMapper;
     private final StoredQueryService storedQueryService;
+    private final QueryExecutionJobService jobService;
 
-    public QueryExecutionService(QueryExecutionRepository queryExecutionRepository, QueryExecutionJobRepository jobRepository, ObjectMapper objectMapper, StoredQueryService storedQueryService) {
+    public QueryExecutionService(QueryExecutionRepository queryExecutionRepository, ObjectMapper objectMapper, StoredQueryService storedQueryService, QueryExecutionJobService jobService) {
         this.queryExecutionRepository = queryExecutionRepository;
-        this.jobRepository = jobRepository;
         this.objectMapper = objectMapper;
         this.storedQueryService = storedQueryService;
+        this.jobService = jobService;
     }
-
 
     @Async
     @Transactional
     public void executeQuery(Long jobId) {
-        QueryExecutionJob job = jobRepository.findById(jobId).orElseThrow();
+        QueryExecutionJob job = jobService.getJobById(jobId).orElseThrow();
         job.setStatus(QueryExecutionJob.JobStatus.RUNNING);
 
         Optional<StoredQuery> storedQuery = storedQueryService.getQueryById(job.getSourceQueryId());
