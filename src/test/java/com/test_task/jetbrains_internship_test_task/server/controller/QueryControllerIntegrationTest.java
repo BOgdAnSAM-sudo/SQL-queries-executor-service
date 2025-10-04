@@ -10,7 +10,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -21,7 +20,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Transactional
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class QueryControllerIntegrationTest {
 
@@ -115,24 +113,15 @@ public class QueryControllerIntegrationTest {
     }
 
     @Test
-    public void executeQuery_ValidId_ReturnsResults() throws Exception {
+    public void executeQuery_ValidId_ReturnsAccepted() throws Exception {
         StoredQuery storedQuery = queryService.addQuery("SELECT Name, Age FROM titanic WHERE CAST(PassengerId AS INTEGER) <= 3");
         Long queryId = storedQuery.getId();
 
         mockMvc.perform(get("/api/execute")
                         .param("queryId", queryId.toString()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3)) // Should return 3 passengers
-                .andExpect(jsonPath("$[0].length()").value(2)); // Each row has 2 columns
+                .andExpect(status().isAccepted());
     }
 
-    @Test
-    public void executeQuery_NonExistentId_ReturnsEmpty() throws Exception {
-        mockMvc.perform(get("/api/execute")
-                        .param("queryId", "999"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(""));
-    }
 
     @Test
     public void executeQuery_MissingQueryId_ReturnsBadRequest() throws Exception {
@@ -169,9 +158,7 @@ public class QueryControllerIntegrationTest {
 
         mockMvc.perform(get("/api/execute")
                         .param("queryId", queryId.toString()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3)) // 3 passenger classes
-                .andExpect(jsonPath("$[0].length()").value(2)); // Pclass and count
+                .andExpect(status().isAccepted());
     }
 
     @Test
