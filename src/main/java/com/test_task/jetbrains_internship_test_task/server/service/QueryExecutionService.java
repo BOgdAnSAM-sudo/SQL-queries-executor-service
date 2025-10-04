@@ -13,8 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
-
 @Service
 public class QueryExecutionService {
 
@@ -36,7 +34,6 @@ public class QueryExecutionService {
     public void executeQuery(Long jobId) {
         QueryExecutionJob job = jobRepository.findById(jobId).orElseThrow();
         job.setStatus(QueryExecutionJob.JobStatus.RUNNING);
-        jobRepository.save(job);
 
         Optional<StoredQuery> storedQuery = storedQueryService.getQueryById(job.getSourceQueryId());
 
@@ -44,7 +41,6 @@ public class QueryExecutionService {
             String errorMessage = "Source query not found with ID: " + job.getSourceQueryId();
             job.setStatus(QueryExecutionJob.JobStatus.FAILED);
             job.setErrorMessage(errorMessage);
-            jobRepository.save(job);
             throw new RuntimeException(errorMessage);
         }
 
@@ -66,8 +62,6 @@ public class QueryExecutionService {
             job.setStatus(QueryExecutionJob.JobStatus.FAILED);
             job.setErrorMessage(e.getMessage());
         }
-
-        jobRepository.save(job);
     }
 
     private List<List<Object>> convertResultToList(List<Map<String, Object>> result) {
