@@ -19,7 +19,7 @@ public class QueryExecutionJobService {
 
     public QueryExecutionJob addJob(Long queryId){
         if (queryId == null) {
-            throw new RuntimeException("Query cannot be null");
+            throw new QueryExecutionJobException("Query cannot be null");
         }
 
         QueryExecutionJob queryExecutionJob = new QueryExecutionJob();

@@ -39,7 +39,7 @@ public class QueryExecutionService {
             String errorMessage = "Source query not found with ID: " + job.getSourceQueryId();
             job.setStatus(QueryExecutionJob.JobStatus.FAILED);
             job.setErrorMessage(errorMessage);
-            throw new RuntimeException(errorMessage);
+            throw new QueryExecutionJobException(errorMessage);
         }
 
         String query = storedQuery.get().getQuery();
