@@ -7,34 +7,78 @@ import java.util.regex.Pattern;
 @Service
 public class QueryValidationService {
 
-    private static final Set<String> DANGEROUS_KEYWORDS = Set.of(
-            "DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE", "TRUNCATE"
-    );
-
-    private static final Pattern SQL_INJECTION_PATTERN =
-            Pattern.compile("([';]+|(--)+)", Pattern.CASE_INSENSITIVE);
-
     public void validateQuery(String query) {
         if (query == null || query.trim().isEmpty()) {
-            throw new IllegalArgumentException("Query cannot be empty");
+            throw new SecurityException("Query cannot be empty");
         }
 
+        // Convert to uppercase for case-insensitive matching
         String upperQuery = query.toUpperCase().trim();
 
-        for (String keyword : DANGEROUS_KEYWORDS) {
-            if (upperQuery.contains(keyword + " ") || upperQuery.contains(keyword + ";")) {
-                throw new SecurityException("Query contains dangerous operation: " + keyword);
-            }
+        String selectRegex = "\\b" + "SELECT" + "\\b";
+        if (!Pattern.compile(selectRegex).matcher(upperQuery).find()) {
+            throw new SecurityException("Only select queries allowed");
         }
 
-        // Basic SQL injection prevention
-        if (SQL_INJECTION_PATTERN.matcher(query).find()) {
+        if (containsMultipleStatements(query)) {
             throw new SecurityException("Query contains potentially dangerous characters");
         }
 
-        // Ensure it's a SELECT query
-        if (!upperQuery.startsWith("SELECT")) {
-            throw new IllegalArgumentException("Only SELECT queries are allowed");
+        if (containsSqlInjectionPatterns(upperQuery)) {
+            throw new SecurityException("Query contains potentially dangerous characters");
         }
+
+        if (containsDangerousKeywords(upperQuery)) {
+            throw new SecurityException("Query contains potentially dangerous characters");
+        }
+
+        if (!hasBalancedQuotes(query)) {
+            throw new SecurityException("Query contains potentially dangerous characters");
+        }
+    }
+
+    private boolean containsMultipleStatements(String query) {
+        String temp = query.trim();
+        if (temp.endsWith(";")) {
+            temp = temp.substring(0, temp.length() - 1);
+        }
+
+        return temp.contains(";");
+    }
+
+    private boolean containsSqlInjectionPatterns(String upperQuery) {
+        String[] injectionPatterns = {
+                "OR '1'='1", "OR '1'='1'", "OR 1=1", "OR 'a'='a",
+                "UNION SELECT", "UNION ALL SELECT",
+                "--", "/*", "*/", "#",
+                "DROP TABLE", "DELETE FROM", "INSERT INTO", "UPDATE ",
+                "EXEC ", "EXECUTE ", "XP_", "SP_"
+        };
+
+        for (String pattern : injectionPatterns) {
+            if (upperQuery.contains(pattern)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean containsDangerousKeywords(String upperQuery) {
+        String regex = "\\b(UNION|DROP|DELETE|INSERT|UPDATE|EXEC|CREATE|ALTER|TRUNCATE|MERGE)\\b";
+        return Pattern.compile(regex).matcher(upperQuery).find();
+    }
+
+    private boolean hasBalancedQuotes(String query) {
+        int singleQuotes = 0;
+        boolean inQuote = false;
+
+        for (char c : query.toCharArray()) {
+            if (c == '\'') {
+                inQuote = !inQuote;
+                singleQuotes++;
+            }
+        }
+
+        return singleQuotes % 2 == 0 && !inQuote;
     }
 }
