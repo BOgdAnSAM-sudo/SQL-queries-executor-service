@@ -2,7 +2,7 @@ package com.test_task.jetbrains_internship_test_task.server.controller;
 
 import com.test_task.jetbrains_internship_test_task.entity.QueryExecutionJob;
 import com.test_task.jetbrains_internship_test_task.entity.StoredQuery;
-import com.test_task.jetbrains_internship_test_task.server.repository.QueryExecutionJobRepository;
+import com.test_task.jetbrains_internship_test_task.server.service.QueryExecutionJobService;
 import com.test_task.jetbrains_internship_test_task.server.service.QueryExecutionService;
 import com.test_task.jetbrains_internship_test_task.server.service.StoredQueryService;
 import org.springframework.http.MediaType;
@@ -20,12 +20,12 @@ public class QueryController {
 
     private final StoredQueryService queryService;
     private final QueryExecutionService executionService;
-    private final QueryExecutionJobRepository jobRepository;
+    private final QueryExecutionJobService jobService;
 
-    public QueryController(StoredQueryService queryService, QueryExecutionService executionService, QueryExecutionJobRepository jobRepository) {
+    public QueryController(StoredQueryService queryService, QueryExecutionService executionService, QueryExecutionJobService jobService) {
         this.queryService = queryService;
         this.executionService = executionService;
-        this.jobRepository = jobRepository;
+        this.jobService = jobService;
     }
 
     @PostMapping(value = "/queries", consumes = MediaType.TEXT_PLAIN_VALUE)
@@ -46,10 +46,7 @@ public class QueryController {
     public ResponseEntity<?> executeQuery(@RequestParam Long queryId) {
         StoredQuery query = queryService.getQueryById(queryId).orElseThrow(() -> new RuntimeException("Query not found"));
 
-        QueryExecutionJob newJob = new QueryExecutionJob();
-        newJob.setSourceQueryId(queryId);
-        newJob.setStatus(QueryExecutionJob.JobStatus.PENDING);
-        QueryExecutionJob savedJob = jobRepository.save(newJob);
+        QueryExecutionJob savedJob = jobService.addJob(queryId);
 
         executionService.executeQuery(savedJob.getId());
 
@@ -68,13 +65,13 @@ public class QueryController {
 
     @GetMapping("/execution/{jobId}/status")
     public ResponseEntity<?> getStatus(@PathVariable Long jobId) {
-        QueryExecutionJob job = jobRepository.findById(jobId).orElseThrow(() -> new RuntimeException("Job not found"));
+        QueryExecutionJob job = jobService.getJobById(jobId).orElseThrow(() -> new RuntimeException("Job not found"));
         return ResponseEntity.ok(Map.of("jobId", job.getId(), "status", job.getStatus()));
     }
 
     @GetMapping("/execution/{jobId}/result")
     public ResponseEntity<?> getResult(@PathVariable Long jobId) {
-        QueryExecutionJob job = jobRepository.findById(jobId).orElseThrow(() -> new RuntimeException("Job not found"));
+        QueryExecutionJob job = jobService.getJobById(jobId).orElseThrow(() -> new RuntimeException("Job not found"));
 
         if (job.getStatus() != QueryExecutionJob.JobStatus.COMPLETED) {
             return ResponseEntity.ok(Map.of("status", job.getStatus(), "message", "Result not yet available."));
