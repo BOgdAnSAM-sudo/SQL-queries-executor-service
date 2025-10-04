@@ -44,7 +44,11 @@ public class QueryController {
 
     @GetMapping("/execute")
     public ResponseEntity<?> executeQuery(@RequestParam Long queryId) {
-        StoredQuery query = queryService.getQueryById(queryId).orElseThrow(() -> new RuntimeException("Query not found"));
+        queryService.getQueryById(queryId).orElseThrow(() -> new RuntimeException("Query not found"));
+
+        if (jobService.getJobById(queryId).isPresent()){
+            throw new RuntimeException("Job already exists");
+        }
 
         QueryExecutionJob savedJob = jobService.addJob(queryId);
 
