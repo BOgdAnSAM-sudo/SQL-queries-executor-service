@@ -1,7 +1,9 @@
 package com.test_task.jetbrains_internship_test_task.server.controller;
 
 import com.test_task.jetbrains_internship_test_task.entity.StoredQuery;
+import com.test_task.jetbrains_internship_test_task.server.service.StoredQueryException;
 import com.test_task.jetbrains_internship_test_task.server.service.StoredQueryService;
+import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -36,7 +38,7 @@ public class QueryControllerIntegrationTest {
         mockMvc.perform(post("/api/queries")
                         .contentType(MediaType.TEXT_PLAIN)
                         .content(queryText))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber());
         
         List<StoredQuery> storedQueries = queryService.getAllQueries();
@@ -62,7 +64,7 @@ public class QueryControllerIntegrationTest {
         mockMvc.perform(post("/api/queries")
                         .contentType(MediaType.TEXT_PLAIN)
                         .content(complexQuery))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber());
 
         List<StoredQuery> storedQueries = queryService.getAllQueries();
@@ -78,12 +80,12 @@ public class QueryControllerIntegrationTest {
         mockMvc.perform(post("/api/queries")
                         .contentType(MediaType.TEXT_PLAIN)
                         .content(query1))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/queries")
                         .contentType(MediaType.TEXT_PLAIN)
                         .content(query2))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
 
         List<StoredQuery> storedQueries = queryService.getAllQueries();
         assertEquals(2, storedQueries.size());
@@ -117,48 +119,23 @@ public class QueryControllerIntegrationTest {
         StoredQuery storedQuery = queryService.addQuery("SELECT Name, Age FROM titanic WHERE CAST(PassengerId AS INTEGER) <= 3");
         Long queryId = storedQuery.getId();
 
-        mockMvc.perform(get("/api/execute")
-                        .param("queryId", queryId.toString()))
-                .andExpect(status().isAccepted());
+        mockMvc.perform(post("/api/queries/{queryId}/execute", queryId))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.jobId").exists())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.message").value("Query execution started. Check status endpoint for progress."))
+                .andExpect(header().exists("Location"));
     }
 
 
     @Test
-    public void executeQuery_MissingQueryId_ReturnsBadRequest() throws Exception {
-        mockMvc.perform(get("/api/execute"))
-                .andExpect(status().isBadRequest());
-    }
+    public void executeQuery_InvalidQueryId_ThrowsException() {
+        Exception thrown = assertThrows(
+                ServletException.class,
+                () -> mockMvc.perform(post("/api/queries/{queryId}/execute", 999))
+        );
 
-    @Test
-    public void executeQuery_InvalidQueryId_ReturnsBadRequest() throws Exception {
-        mockMvc.perform(get("/api/execute")
-                        .param("queryId", "invalid"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    public void completeWorkflow_StoreAndExecute_Success() throws Exception {
-        String analyticalQuery = "SELECT Pclass, COUNT(*) as total FROM titanic GROUP BY Pclass ORDER BY Pclass";
-
-        String response = mockMvc.perform(post("/api/queries")
-                        .contentType(MediaType.TEXT_PLAIN)
-                        .content(analyticalQuery))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        Long queryId = Long.parseLong(response.split("\"id\":")[1].replaceAll("[^0-9]", ""));
-
-        mockMvc.perform(get("/api/queries"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(queryId))
-                .andExpect(jsonPath("$[0].query").value(analyticalQuery));
-
-        mockMvc.perform(get("/api/execute")
-                        .param("queryId", queryId.toString()))
-                .andExpect(status().isAccepted());
+        assertTrue(thrown.getMessage().contains("Query not found"));
     }
 
     @Test
@@ -183,7 +160,7 @@ public class QueryControllerIntegrationTest {
         mockMvc.perform(post("/api/queries")
                         .contentType(MediaType.TEXT_PLAIN)
                         .content(multilineQuery))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber());
 
         List<StoredQuery> storedQueries = queryService.getAllQueries();

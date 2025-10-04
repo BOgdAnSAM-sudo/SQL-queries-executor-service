@@ -49,7 +49,7 @@ public class QueryControllerTest {
         ResponseEntity<Map<String, Long>> response = queryController.storeQuery(queryText);
 
         assertNotNull(response);
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1L, response.getBody().get("id"));
 
@@ -66,7 +66,7 @@ public class QueryControllerTest {
 
         ResponseEntity<Map<String, Long>> response = queryController.storeQuery(complexQuery);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertEquals(2L, Objects.requireNonNull(response.getBody()).get("id"));
         verify(queryService).addQuery(complexQuery);
     }
@@ -348,7 +348,7 @@ public class QueryControllerTest {
 
         ResponseEntity<Map<String, Long>> response = queryController.storeQuery(queryText);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
         Map<String, Long> body = response.getBody();
         assertNotNull(body);
         assertEquals(1, body.size());

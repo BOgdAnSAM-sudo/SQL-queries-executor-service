@@ -2,15 +2,12 @@ package com.test_task.jetbrains_internship_test_task.server.controller;
 
 import com.test_task.jetbrains_internship_test_task.entity.QueryExecutionJob;
 import com.test_task.jetbrains_internship_test_task.entity.StoredQuery;
-import com.test_task.jetbrains_internship_test_task.server.service.QueryExecutionJobService;
-import com.test_task.jetbrains_internship_test_task.server.service.QueryExecutionService;
-import com.test_task.jetbrains_internship_test_task.server.service.StoredQueryService;
+import com.test_task.jetbrains_internship_test_task.server.service.*;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,9 +28,9 @@ public class QueryController {
     @PostMapping(value = "/queries", consumes = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<Map<String, Long>> storeQuery(@RequestBody String query) {
         StoredQuery storedQuery = queryService.addQuery(query);
-        Map<String, Long> response = new HashMap<>();
-        response.put("id", storedQuery.getId());
-        return ResponseEntity.ok(response);
+
+        return ResponseEntity.created(URI.create("/api/queries/" + storedQuery.getId()))
+                .body(Map.of("id", storedQuery.getId()));
     }
 
     @GetMapping("/queries")
@@ -42,12 +39,12 @@ public class QueryController {
         return ResponseEntity.ok(queries);
     }
 
-    @GetMapping("/execute")
-    public ResponseEntity<?> executeQuery(@RequestParam Long queryId) {
-        queryService.getQueryById(queryId).orElseThrow(() -> new RuntimeException("Query not found"));
+    @PostMapping("/queries/{queryId}/execute")
+    public ResponseEntity<?> executeQuery(@PathVariable Long queryId) {
+        queryService.getQueryById(queryId).orElseThrow(() -> new StoredQueryException("Query not found"));
 
         if (jobService.getJobById(queryId).isPresent()){
-            throw new RuntimeException("Job already exists");
+            throw new QueryExecutionJobException("Job already exists");
         }
 
         QueryExecutionJob savedJob = jobService.addJob(queryId);
@@ -67,13 +64,13 @@ public class QueryController {
                 .body(response);
     }
 
-    @GetMapping("/execution/{jobId}/status")
+    @GetMapping("/executions/{jobId}/status")
     public ResponseEntity<?> getStatus(@PathVariable Long jobId) {
         QueryExecutionJob job = jobService.getJobById(jobId).orElseThrow(() -> new RuntimeException("Job not found"));
         return ResponseEntity.ok(Map.of("jobId", job.getId(), "status", job.getStatus()));
     }
 
-    @GetMapping("/execution/{jobId}/result")
+    @GetMapping("/executions/{jobId}/result")
     public ResponseEntity<?> getResult(@PathVariable Long jobId) {
         QueryExecutionJob job = jobService.getJobById(jobId).orElseThrow(() -> new RuntimeException("Job not found"));
 
