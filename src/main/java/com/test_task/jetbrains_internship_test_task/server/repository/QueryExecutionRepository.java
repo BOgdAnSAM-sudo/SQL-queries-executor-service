@@ -15,6 +15,9 @@ public class QueryExecutionRepository {
     }
 
     public List<Map<String, Object>> executeNativeQuery(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            throw new IllegalArgumentException("Query cannot be empty");
+        }
         return jdbcTemplate.queryForList(query);
     }
 }
