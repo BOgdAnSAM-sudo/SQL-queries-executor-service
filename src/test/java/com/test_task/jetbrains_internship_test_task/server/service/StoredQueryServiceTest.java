@@ -28,6 +28,9 @@ public class StoredQueryServiceTest {
     @Mock
     private StoredQueryRepository queryRepository;
 
+    @Mock
+    private QueryValidationService validationService;
+
     @InjectMocks
     private StoredQueryService queryService;
 

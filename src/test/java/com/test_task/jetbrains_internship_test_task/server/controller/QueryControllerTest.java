@@ -1,6 +1,8 @@
 package com.test_task.jetbrains_internship_test_task.server.controller;
 
+import com.test_task.jetbrains_internship_test_task.entity.QueryExecutionJob;
 import com.test_task.jetbrains_internship_test_task.entity.StoredQuery;
+import com.test_task.jetbrains_internship_test_task.server.service.QueryExecutionJobService;
 import com.test_task.jetbrains_internship_test_task.server.service.QueryExecutionService;
 import com.test_task.jetbrains_internship_test_task.server.service.StoredQueryService;
 import com.test_task.jetbrains_internship_test_task.server.service.StoredQueryException;
@@ -13,10 +15,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -29,6 +31,9 @@ public class QueryControllerTest {
 
     @Mock
     private QueryExecutionService executionService;
+
+    @Mock
+    private QueryExecutionJobService jobService;
 
     @InjectMocks
     private QueryController queryController;
@@ -47,7 +52,6 @@ public class QueryControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1L, response.getBody().get("id"));
-        assertNull(response.getHeaders().getContentType());
 
         verify(queryService).addQuery(queryText);
     }
@@ -81,28 +85,6 @@ public class QueryControllerTest {
     }
 
     @Test
-    public void storeQuery_NullQuery_ThrowsException() {
-        when(queryService.addQuery(null))
-                .thenThrow(new StoredQueryException("Query cannot be null"));
-
-        StoredQueryException exception = assertThrows(StoredQueryException.class,
-                () -> queryController.storeQuery(null));
-
-        assertEquals("Query cannot be null", exception.getMessage());
-    }
-
-    @Test
-    public void storeQuery_EmptyQuery_ThrowsException() {
-        when(queryService.addQuery(""))
-                .thenThrow(new StoredQueryException("Query cannot be empty"));
-
-        StoredQueryException exception = assertThrows(StoredQueryException.class,
-                () -> queryController.storeQuery(""));
-
-        assertEquals("Query cannot be empty", exception.getMessage());
-    }
-
-    @Test
     public void getAllQueries_EmptyList_ReturnsEmptyList() {
         when(queryService.getAllQueries()).thenReturn(List.of());
 
@@ -112,8 +94,6 @@ public class QueryControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(response.getBody().isEmpty());
-        assertNull(response.getHeaders().getContentType());
-
         verify(queryService).getAllQueries();
     }
 
@@ -142,133 +122,220 @@ public class QueryControllerTest {
     }
 
     @Test
-    public void getAllQueries_ServiceThrowsException_PropagatesException() {
-        when(queryService.getAllQueries())
-                .thenThrow(new RuntimeException("Database error"));
-
-        RuntimeException exception = assertThrows(RuntimeException.class,
-                () -> queryController.getAllQueries());
-
-        assertEquals("Database error", exception.getMessage());
-        verify(queryService).getAllQueries();
-    }
-
-    @Test
-    public void executeQuery_ValidId_ReturnsResults() {
+    public void executeQuery_ValidQueryId_StartsJobExecution() {
         Long queryId = 1L;
-        List<List<Object>> mockResults = List.of(
-                List.of("John Doe", 30, "Engineer"),
-                List.of("Jane Smith", 25, "Designer")
-        );
+        StoredQuery storedQuery = new StoredQuery("SELECT * FROM test");
+        storedQuery.setId(queryId);
 
-        when(executionService.executeQueryById(queryId)).thenReturn(mockResults);
+        QueryExecutionJob job = new QueryExecutionJob();
+        job.setId(100L);
+        job.setSourceQueryId(queryId);
+        job.setStatus(QueryExecutionJob.JobStatus.PENDING);
 
-        ResponseEntity<List<List<Object>>> response = queryController.executeQuery(queryId);
+        when(queryService.getQueryById(queryId)).thenReturn(Optional.of(storedQuery));
+        when(jobService.getJobById(queryId)).thenReturn(Optional.empty());
+        when(jobService.addJob(queryId)).thenReturn(job);
+        doNothing().when(executionService).executeQuery(job.getId());
 
-        assertNotNull(response);
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        ResponseEntity<?> response = queryController.executeQuery(queryId);
+
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(2, response.getBody().size());
-        assertEquals(3, response.getBody().getFirst().size());
-        assertEquals("John Doe", response.getBody().getFirst().getFirst());
-        assertNull(response.getHeaders().getContentType());
 
-        verify(executionService).executeQueryById(queryId);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+        assertEquals("100", responseBody.get("jobId"));
+        assertEquals("PENDING", responseBody.get("status"));
+        assertEquals("Query execution started. Check status endpoint for progress.", responseBody.get("message"));
+
+        assertNotNull(response.getHeaders().getLocation());
+        assertTrue(response.getHeaders().getLocation().toString().contains("/execution/100/status"));
+
+        verify(queryService).getQueryById(queryId);
+        verify(jobService).getJobById(queryId);
+        verify(jobService).addJob(queryId);
+        verify(executionService).executeQuery(job.getId());
     }
 
     @Test
-    public void executeQuery_EmptyResults_ReturnsEmptyList() {
-        Long queryId = 2L;
-        List<List<Object>> emptyResults = List.of();
-
-        when(executionService.executeQueryById(queryId)).thenReturn(emptyResults);
-
-        ResponseEntity<List<List<Object>>> response = queryController.executeQuery(queryId);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertTrue(response.getBody().isEmpty());
-
-        verify(executionService).executeQueryById(queryId);
-    }
-
-    @Test
-    public void executeQuery_NullResults_ReturnsNull() {
+    public void executeQuery_QueryNotFound_ThrowsException() {
         Long queryId = 999L;
-        when(executionService.executeQueryById(queryId)).thenReturn(null);
-
-        ResponseEntity<List<List<Object>>> response = queryController.executeQuery(queryId);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNull(response.getBody());
-
-        verify(executionService).executeQueryById(queryId);
-    }
-
-    @Test
-    public void executeQuery_NonExistentId_ReturnsNull() {
-        Long nonExistentId = 999L;
-        when(executionService.executeQueryById(nonExistentId)).thenReturn(null);
-
-        ResponseEntity<List<List<Object>>> response = queryController.executeQuery(nonExistentId);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNull(response.getBody());
-
-        verify(executionService).executeQueryById(nonExistentId);
-    }
-
-    @Test
-    public void executeQuery_ExecutionThrowsException_PropagatesException() {
-        Long queryId = 1L;
-        when(executionService.executeQueryById(queryId))
-                .thenThrow(new RuntimeException("SQL execution error"));
+        when(queryService.getQueryById(queryId)).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(RuntimeException.class,
                 () -> queryController.executeQuery(queryId));
 
-        assertEquals("SQL execution error", exception.getMessage());
-        verify(executionService).executeQueryById(queryId);
+        assertEquals("Query not found", exception.getMessage());
+        verify(queryService).getQueryById(queryId);
+        verifyNoInteractions(jobService, executionService);
     }
 
     @Test
-    public void executeQuery_InvalidQueryId_ServiceHandlesGracefully() {
-        Long invalidId = -1L;
-        when(executionService.executeQueryById(invalidId)).thenReturn(null);
+    public void executeQuery_JobAlreadyExists_ThrowsException() {
+        Long queryId = 1L;
+        StoredQuery storedQuery = new StoredQuery("SELECT * FROM test");
+        storedQuery.setId(queryId);
 
-        ResponseEntity<List<List<Object>>> response = queryController.executeQuery(invalidId);
+        QueryExecutionJob existingJob = new QueryExecutionJob();
+        existingJob.setId(queryId);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNull(response.getBody());
+        when(queryService.getQueryById(queryId)).thenReturn(Optional.of(storedQuery));
+        when(jobService.getJobById(queryId)).thenReturn(Optional.of(existingJob));
 
-        verify(executionService).executeQueryById(invalidId);
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> queryController.executeQuery(queryId));
+
+        assertEquals("Job already exists", exception.getMessage());
+        verify(queryService).getQueryById(queryId);
+        verify(jobService).getJobById(queryId);
+        verifyNoMoreInteractions(jobService);
+        verifyNoInteractions(executionService);
     }
 
-
     @Test
-    public void executeQuery_ComplexDataTypes_ReturnsCorrectly() {
-        Long queryId = 5L;
-        List<List<Object>> complexResults = Arrays.asList(
-                Arrays.asList("String value", 123, 45.67, true, null),
-                Arrays.asList("Another string", 456, 78.90, false, "not null")
-        );
+    public void getStatus_ValidJobId_ReturnsStatus() {
+        Long jobId = 100L;
+        QueryExecutionJob job = new QueryExecutionJob();
+        job.setId(jobId);
+        job.setStatus(QueryExecutionJob.JobStatus.RUNNING);
 
-        when(executionService.executeQueryById(queryId)).thenReturn(complexResults);
+        when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
 
-        ResponseEntity<List<List<Object>>> response = queryController.executeQuery(queryId);
+        ResponseEntity<?> response = queryController.getStatus(jobId);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(2, Objects.requireNonNull(response.getBody()).size());
 
-        List<Object> firstRow = response.getBody().getFirst();
-        assertEquals(5, firstRow.size());
-        assertEquals("String value", firstRow.get(0));
-        assertEquals(123, firstRow.get(1));
-        assertEquals(45.67, firstRow.get(2));
-        assertEquals(true, firstRow.get(3));
-        assertNull(firstRow.get(4));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+        assertEquals(jobId, responseBody.get("jobId"));
+        assertEquals(QueryExecutionJob.JobStatus.RUNNING, responseBody.get("status"));
 
-        verify(executionService).executeQueryById(queryId);
+        verify(jobService).getJobById(jobId);
+    }
+
+    @Test
+    public void getStatus_JobNotFound_ThrowsException() {
+        Long jobId = 999L;
+        when(jobService.getJobById(jobId)).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> queryController.getStatus(jobId));
+
+        assertEquals("Job not found", exception.getMessage());
+        verify(jobService).getJobById(jobId);
+    }
+
+    @Test
+    public void getStatus_CompletedJob_ReturnsCompletedStatus() {
+        Long jobId = 100L;
+        QueryExecutionJob job = new QueryExecutionJob();
+        job.setId(jobId);
+        job.setStatus(QueryExecutionJob.JobStatus.COMPLETED);
+
+        when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
+
+        ResponseEntity<?> response = queryController.getStatus(jobId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+        assertEquals(QueryExecutionJob.JobStatus.COMPLETED, responseBody.get("status"));
+    }
+
+    @Test
+    public void getResult_CompletedJob_ReturnsResult() {
+        Long jobId = 100L;
+        QueryExecutionJob job = new QueryExecutionJob();
+        job.setId(jobId);
+        job.setStatus(QueryExecutionJob.JobStatus.COMPLETED);
+        job.setResult("[[\"John\",30],[\"Jane\",25]]");
+
+        when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
+
+        ResponseEntity<?> response = queryController.getResult(jobId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+        assertEquals(jobId, responseBody.get("jobId"));
+        assertEquals(QueryExecutionJob.JobStatus.COMPLETED, responseBody.get("status"));
+        assertEquals("[[\"John\",30],[\"Jane\",25]]", responseBody.get("result"));
+
+        verify(jobService).getJobById(jobId);
+    }
+
+    @Test
+    public void getResult_PendingJob_ReturnsStatusMessage() {
+        Long jobId = 100L;
+        QueryExecutionJob job = new QueryExecutionJob();
+        job.setId(jobId);
+        job.setStatus(QueryExecutionJob.JobStatus.PENDING);
+
+        when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
+
+        ResponseEntity<?> response = queryController.getResult(jobId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+        assertEquals(QueryExecutionJob.JobStatus.PENDING, responseBody.get("status"));
+        assertEquals("Result not yet available.", responseBody.get("message"));
+        assertNull(responseBody.get("result"));
+    }
+
+    @Test
+    public void getResult_RunningJob_ReturnsStatusMessage() {
+        Long jobId = 100L;
+        QueryExecutionJob job = new QueryExecutionJob();
+        job.setId(jobId);
+        job.setStatus(QueryExecutionJob.JobStatus.RUNNING);
+
+        when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
+
+        ResponseEntity<?> response = queryController.getResult(jobId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+        assertEquals(QueryExecutionJob.JobStatus.RUNNING, responseBody.get("status"));
+        assertEquals("Result not yet available.", responseBody.get("message"));
+    }
+
+    @Test
+    public void getResult_FailedJob_ReturnsStatusWithoutResult() {
+        Long jobId = 100L;
+        QueryExecutionJob job = new QueryExecutionJob();
+        job.setId(jobId);
+        job.setStatus(QueryExecutionJob.JobStatus.FAILED);
+        job.setErrorMessage("Query execution failed");
+
+        when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
+
+        ResponseEntity<?> response = queryController.getResult(jobId);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+        assertEquals(QueryExecutionJob.JobStatus.FAILED, responseBody.get("status"));
+        assertEquals("Result not yet available.", responseBody.get("message"));
+        assertNull(responseBody.get("result"));
+    }
+
+    @Test
+    public void getResult_JobNotFound_ThrowsException() {
+        Long jobId = 999L;
+        when(jobService.getJobById(jobId)).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> queryController.getResult(jobId));
+
+        assertEquals("Job not found", exception.getMessage());
+        verify(jobService).getJobById(jobId);
     }
 
     @Test
@@ -290,5 +357,4 @@ public class QueryControllerTest {
         assertFalse(body.containsKey("query"));
         assertFalse(body.containsKey("createdAt"));
     }
-
 }
