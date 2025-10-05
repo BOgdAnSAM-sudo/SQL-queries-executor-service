@@ -1,5 +1,4 @@
 package com.test_task.jetbrains_internship_test_task.entity;
-// Using JPA for persistence, even with an in-memory H2 database.
 import jakarta.persistence.*;
 
 @Entity
