@@ -1,4 +1,4 @@
-# JetBrains Internship Test Task
+# SQL queries executor service
 
 Simple Spring Application with REST API for storing and executing analytical SQL queries over a dataset.
 
@@ -82,7 +82,7 @@ That is the core of application, simple implementation of given task, but it has
 
 ## Bonus assignments implementation
 
-### 1. Ensuring Read-Only Queries ("The queries should not modify the data inside the database.")
+### 1. Ensuring Read-Only Queries
 
 #### To guarantee that queries do not modify the database, a validation strategy was implemented before any query is saved.
 
@@ -105,7 +105,7 @@ That is the core of application, simple implementation of given task, but it has
 
      - Keywords like UNION are blacklisted for security, which may restrict some complex (but valid) analytical queries.
 
-### 2. Asynchronous Query Execution ("For larger datasets, queries might take some time to execute.")
+### 2. Asynchronous Query Execution
 
 #### To handle queries that may take a long time to execute without blocking the client or causing HTTP timeouts, the execution process was redesigned to be asynchronous.
 
@@ -156,7 +156,7 @@ That is the core of application, simple implementation of given task, but it has
 - Current Status:
     #### Some workflows have been covered by integration tests. Due to time constraints, comprehensive test coverage for every edge case and component interaction has not been completed but can be expanded.
 
-### 4. Performance Improvement via Caching ("The analytic data usually isn’t updated often, in this assignment it’s not updated at all. You can use this fact to improve the performance of your service.") 
+### 4. Performance Improvement via Caching
 
 #### Due to time limitation I have not implemented this assingment, but this is my plan for it.
 
