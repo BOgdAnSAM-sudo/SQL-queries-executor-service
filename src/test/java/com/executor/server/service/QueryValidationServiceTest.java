@@ -50,6 +50,7 @@ class QueryValidationServiceTest {
         assertEquals("Query cannot be empty", exception.getMessage());
     }
 
+
     // Non-SELECT queries - These should throw SecurityException with "Only select queries allowed"
     @ParameterizedTest
     @ValueSource(strings = {
@@ -70,7 +71,7 @@ class QueryValidationServiceTest {
         SecurityException exception = assertThrows(SecurityException.class,
                 () -> queryValidationService.validateQuery(nonSelectQuery));
 
-        assertEquals("Only select queries allowed", exception.getMessage());
+        assertEquals("Only retrieving data queries are allowed", exception.getMessage());
     }
 
     // Dangerous keywords in various contexts
@@ -84,43 +85,13 @@ class QueryValidationServiceTest {
             "SELECT * FROM titanic; CREATE TABLE malicious (data TEXT)",
             "SELECT * FROM titanic; TRUNCATE TABLE titanic",
     })
-    void validateQuery_QueriesWithDangerousKeywords_ThrowsSecurityException(String dangerousQuery) {
+    void validateQuery_QueriesWithMultipleStatements_ThrowsSecurityException(String dangerousQuery) {
         SecurityException exception = assertThrows(SecurityException.class,
                 () -> queryValidationService.validateQuery(dangerousQuery));
 
-        assertEquals("Query contains potentially dangerous characters", exception.getMessage());
+        assertEquals("Query should contain only one statement", exception.getMessage());
     }
 
-    // SQL injection patterns
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "SELECT * FROM titanic;;",
-            "SELECT * FROM titanic WHERE name = 'test';--",
-            "SELECT * FROM titanic WHERE name = 'test' -- comment",
-            "SELECT * FROM titanic WHERE name = '' OR '1'='1'",
-            "SELECT * FROM titanic WHERE name = 'test' OR 1=1",
-            "SELECT * FROM titanic WHERE name = 'test'; SELECT * FROM users",
-            "SELECT * FROM titanic'",
-            "SELECT * FROM titanic'''",
-            "SELECT * FROM titanic WHERE name = 'test' AND 'a'='a",
-    })
-    void validateQuery_QueriesWithSqlInjectionPatterns_ThrowsSecurityException(String injectionQuery) {
-        System.out.println(injectionQuery);
-        SecurityException exception = assertThrows(SecurityException.class,
-                () -> queryValidationService.validateQuery(injectionQuery));
-
-        assertEquals("Query contains potentially dangerous characters", exception.getMessage());
-    }
-
-    @Test
-    void validateQuery_DropAtEndOfQuery_ThrowsSecurityException() {
-        String query = "SELECT * FROM titanic DROP";
-
-        SecurityException exception = assertThrows(SecurityException.class,
-                () -> queryValidationService.validateQuery(query));
-
-        assertEquals("Query contains potentially dangerous characters", exception.getMessage());
-    }
 
     @Test
     void validateQuery_DeleteWithSemicolon_ThrowsSecurityException() {
@@ -129,7 +100,7 @@ class QueryValidationServiceTest {
         SecurityException exception = assertThrows(SecurityException.class,
                 () -> queryValidationService.validateQuery(query));
 
-        assertEquals("Query contains potentially dangerous characters", exception.getMessage());
+        assertEquals("Query should contain only one statement", exception.getMessage());
     }
 
     @Test
@@ -139,7 +110,7 @@ class QueryValidationServiceTest {
         SecurityException exception = assertThrows(SecurityException.class,
                 () -> queryValidationService.validateQuery(query));
 
-        assertEquals("Query contains potentially dangerous characters", exception.getMessage());
+        assertEquals("Query should contain only one statement", exception.getMessage());
     }
 
     // Case sensitivity tests - These should throw SecurityException now
@@ -157,7 +128,7 @@ class QueryValidationServiceTest {
         SecurityException exception = assertThrows(SecurityException.class,
                 () -> queryValidationService.validateQuery(caseInsensitiveQuery));
 
-        assertEquals("Only select queries allowed", exception.getMessage());
+        assertEquals("Only retrieving data queries are allowed", exception.getMessage());
     }
 
     // Complex valid queries that should pass
@@ -227,12 +198,10 @@ class QueryValidationServiceTest {
 
 
     @Test
-    void validateQuery_QueryWithUnbalancedQuotes_ThrowsSecurityException() {
+    void validateQuery_QueryWithUnbalancedQuotes_ThrowsException() {
         String query = "SELECT * FROM titanic WHERE name = 'test";
 
-        SecurityException exception = assertThrows(SecurityException.class,
+        assertThrows(RuntimeException.class,
                 () -> queryValidationService.validateQuery(query));
-
-        assertEquals("Query contains potentially dangerous characters", exception.getMessage());
     }
 }

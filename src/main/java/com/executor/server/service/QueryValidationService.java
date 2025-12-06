@@ -1,84 +1,35 @@
 package com.executor.server.service;
 
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.DescribeStatement;
+import net.sf.jsqlparser.statement.ShowStatement;
+import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.Statements;
+import net.sf.jsqlparser.statement.select.Select;
 import org.springframework.stereotype.Service;
-import java.util.Set;
-import java.util.regex.Pattern;
 
 @Service
 public class QueryValidationService {
 
-    public void validateQuery(String query) {
+    public void validateQuery(String query){
         if (query == null || query.trim().isEmpty()) {
             throw new SecurityException("Query cannot be empty");
         }
 
-        // Convert to uppercase for case-insensitive matching
-        String upperQuery = query.toUpperCase().trim();
+        Statement sqlStatement;
+        try {
+            Statements statements = CCJSqlParserUtil.parseStatements(query);
+            if (statements.size() != 1)
+                throw new SecurityException("Query should contain only one statement");
 
-        String selectRegex = "\\b" + "SELECT" + "\\b";
-        if (!Pattern.compile(selectRegex).matcher(upperQuery).find()) {
-            throw new SecurityException("Only select queries allowed");
+            sqlStatement = statements.getFirst();
+        } catch (JSQLParserException e) {
+            throw new RuntimeException(e);
         }
 
-        if (containsMultipleStatements(query)) {
-            throw new SecurityException("Query contains potentially dangerous characters");
+        if (!(sqlStatement instanceof Select || sqlStatement instanceof DescribeStatement || sqlStatement instanceof ShowStatement)){
+            throw new SecurityException("Only retrieving data queries are allowed");
         }
-
-        if (containsSqlInjectionPatterns(upperQuery)) {
-            throw new SecurityException("Query contains potentially dangerous characters");
-        }
-
-        if (containsDangerousKeywords(upperQuery)) {
-            throw new SecurityException("Query contains potentially dangerous characters");
-        }
-
-        if (!hasBalancedQuotes(query)) {
-            throw new SecurityException("Query contains potentially dangerous characters");
-        }
-    }
-
-    private boolean containsMultipleStatements(String query) {
-        String temp = query.trim();
-        if (temp.endsWith(";")) {
-            temp = temp.substring(0, temp.length() - 1);
-        }
-
-        return temp.contains(";");
-    }
-
-    private boolean containsSqlInjectionPatterns(String upperQuery) {
-        String[] injectionPatterns = {
-                "OR '1'='1", "OR '1'='1'", "OR 1=1", "OR 'a'='a",
-                "UNION SELECT", "UNION ALL SELECT",
-                "--", "/*", "*/", "#",
-                "DROP TABLE", "DELETE FROM", "INSERT INTO", "UPDATE ",
-                "EXEC ", "EXECUTE ", "XP_", "SP_"
-        };
-
-        for (String pattern : injectionPatterns) {
-            if (upperQuery.contains(pattern)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean containsDangerousKeywords(String upperQuery) {
-        String regex = "\\b(UNION|DROP|DELETE|INSERT|UPDATE|EXEC|CREATE|ALTER|TRUNCATE|MERGE)\\b";
-        return Pattern.compile(regex).matcher(upperQuery).find();
-    }
-
-    private boolean hasBalancedQuotes(String query) {
-        int singleQuotes = 0;
-        boolean inQuote = false;
-
-        for (char c : query.toCharArray()) {
-            if (c == '\'') {
-                inQuote = !inQuote;
-                singleQuotes++;
-            }
-        }
-
-        return singleQuotes % 2 == 0 && !inQuote;
     }
 }
