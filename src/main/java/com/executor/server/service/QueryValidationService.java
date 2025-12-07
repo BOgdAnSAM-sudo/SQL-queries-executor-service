@@ -25,7 +25,7 @@ public class QueryValidationService {
 
             sqlStatement = statements.getFirst();
         } catch (JSQLParserException e) {
-            throw new RuntimeException(e);
+            throw new SecurityException("Bad query", e);
         }
 
         if (!(sqlStatement instanceof Select || sqlStatement instanceof DescribeStatement || sqlStatement instanceof ShowStatement)){
