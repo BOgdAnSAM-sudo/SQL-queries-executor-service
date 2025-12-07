@@ -1,10 +1,9 @@
 package com.executor.server.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.executor.entity.QueryExecutionJob;
 import com.executor.entity.StoredQuery;
 import com.executor.server.repository.QueryExecutionRepository;
-import org.springframework.scheduling.annotation.Async;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +13,6 @@ import java.util.Optional;
 
 @Service
 public class QueryExecutionService {
-
     private final QueryExecutionRepository queryExecutionRepository;
     private final ObjectMapper objectMapper;
     private final StoredQueryService storedQueryService;
@@ -27,9 +25,8 @@ public class QueryExecutionService {
         this.jobService = jobService;
     }
 
-    @Async
     @Transactional
-    public void executeQuery(Long jobId) {
+    protected void executeQuery(Long jobId){
         QueryExecutionJob job = jobService.getJobById(jobId).orElseThrow();
         job.setStatus(QueryExecutionJob.JobStatus.RUNNING);
 
@@ -67,5 +64,4 @@ public class QueryExecutionService {
                 .map(row -> row.values().stream().toList())
                 .toList();
     }
-
 }

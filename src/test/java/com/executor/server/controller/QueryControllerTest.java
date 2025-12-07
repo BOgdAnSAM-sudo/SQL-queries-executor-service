@@ -3,7 +3,7 @@ package com.executor.server.controller;
 import com.executor.entity.QueryExecutionJob;
 import com.executor.entity.StoredQuery;
 import com.executor.server.service.QueryExecutionJobService;
-import com.executor.server.service.QueryExecutionService;
+import com.executor.server.service.AsyncQueryExecutionService;
 import com.executor.server.service.StoredQueryService;
 import com.executor.server.service.StoredQueryException;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ public class QueryControllerTest {
     private StoredQueryService queryService;
 
     @Mock
-    private QueryExecutionService executionService;
+    private AsyncQueryExecutionService executionService;
 
     @Mock
     private QueryExecutionJobService jobService;
