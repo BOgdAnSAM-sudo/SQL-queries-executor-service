@@ -17,7 +17,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class AsyncQueryExecutionServiceTest {
+class QueryExecutionServiceTest {
 
     @Mock
     private QueryExecutionRepository queryExecutionRepository;
@@ -32,7 +32,7 @@ class AsyncQueryExecutionServiceTest {
     private QueryExecutionJobService jobService;
 
     @InjectMocks
-    private AsyncQueryExecutionService asyncQueryExecutionService;
+    private QueryExecutionService QueryExecutionService;
 
     @Test
     void executeQuery_ValidJobId_ExecutesSuccessfully() throws Exception {
@@ -61,7 +61,7 @@ class AsyncQueryExecutionServiceTest {
         when(queryExecutionRepository.executeNativeQuery(queryText)).thenReturn(mockResult);
         when(objectMapper.writeValueAsString(any())).thenReturn(resultJson);
 
-        asyncQueryExecutionService.executeQuery(jobId);
+        QueryExecutionService.executeQuery(jobId);
 
         verify(jobService).getJobById(jobId);
         verify(storedQueryService).getQueryById(queryId);
@@ -79,7 +79,7 @@ class AsyncQueryExecutionServiceTest {
 
         when(jobService.getJobById(jobId)).thenReturn(Optional.empty());
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> asyncQueryExecutionService.executeQuery(jobId));
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> QueryExecutionService.executeQuery(jobId));
 
         assertTrue(exception.getMessage().contains("No value present"));
         verify(jobService).getJobById(jobId);
@@ -99,7 +99,7 @@ class AsyncQueryExecutionServiceTest {
         when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
         when(storedQueryService.getQueryById(queryId)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> asyncQueryExecutionService.executeQuery(jobId));
+        assertThrows(RuntimeException.class, () -> QueryExecutionService.executeQuery(jobId));
 
         verify(jobService).getJobById(jobId);
         verify(storedQueryService).getQueryById(queryId);
@@ -130,7 +130,7 @@ class AsyncQueryExecutionServiceTest {
         when(queryExecutionRepository.executeNativeQuery(queryText))
                 .thenThrow(new RuntimeException("Database connection failed"));
 
-        asyncQueryExecutionService.executeQuery(jobId);
+        QueryExecutionService.executeQuery(jobId);
 
         verify(jobService).getJobById(jobId);
         verify(storedQueryService).getQueryById(queryId);
@@ -167,7 +167,7 @@ class AsyncQueryExecutionServiceTest {
         when(objectMapper.writeValueAsString(any()))
                 .thenThrow(new RuntimeException("JSON serialization failed"));
 
-        asyncQueryExecutionService.executeQuery(jobId);
+        QueryExecutionService.executeQuery(jobId);
 
         verify(jobService).getJobById(jobId);
         verify(storedQueryService).getQueryById(queryId);
@@ -202,7 +202,7 @@ class AsyncQueryExecutionServiceTest {
         when(queryExecutionRepository.executeNativeQuery(queryText)).thenReturn(mockResult);
         when(objectMapper.writeValueAsString(any())).thenReturn(emptyJsonArray);
 
-        asyncQueryExecutionService.executeQuery(jobId);
+        QueryExecutionService.executeQuery(jobId);
 
         assertEquals(QueryExecutionJob.JobStatus.COMPLETED, job.getStatus());
         assertEquals(emptyJsonArray, job.getResult());
@@ -242,7 +242,7 @@ class AsyncQueryExecutionServiceTest {
         when(queryExecutionRepository.executeNativeQuery(queryText)).thenReturn(mockResult);
         when(objectMapper.writeValueAsString(any())).thenReturn(resultJson);
 
-        asyncQueryExecutionService.executeQuery(jobId);
+        QueryExecutionService.executeQuery(jobId);
 
         assertEquals(QueryExecutionJob.JobStatus.COMPLETED, job.getStatus());
         assertEquals(resultJson, job.getResult());

@@ -212,14 +212,7 @@ public class AsyncQueryExecutionServiceIntegrationTest {
     @Test
     public void executeQuery_SyntaxError_FailsWithErrorMessage() throws Exception {
         String syntaxError = "SELECT FROM WHERE titanic";
-        StoredQuery storedQuery = storedQueryService.addQuery(syntaxError);
-        QueryExecutionJob job = jobService.addJob(storedQuery.getId());
-
-        asyncQueryExecutionService.executeQuery(job.getId());
-        QueryExecutionJob failedJob = waitForJobCompletion(job.getId(), 10);
-
-        assertEquals(QueryExecutionJob.JobStatus.FAILED, failedJob.getStatus());
-        assertNotNull(failedJob.getErrorMessage());
+        assertThrows(RuntimeException.class, () -> storedQueryService.addQuery(syntaxError));
     }
 
     @Test

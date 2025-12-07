@@ -58,7 +58,7 @@ public class QueryControllerIntegrationTest {
 
     @Test
     public void storeQuery_WithSpecialCharacters_HandlesCorrectly() throws Exception {
-        String complexQuery = "SELECT * FROM table WHERE name = John`s Café";
+        String complexQuery = "SELECT * FROM table WHERE name = 'John''s Café'";
 
         mockMvc.perform(post("/api/queries")
                         .contentType(MediaType.TEXT_PLAIN)
