@@ -25,7 +25,6 @@ public class QueryExecutionService {
 
         List<List<Object>> formattedResult = convertResultToList(queryResult);
 
-//            Store the result as a JSON string
         return objectMapper.writeValueAsString(formattedResult);
     }
 
