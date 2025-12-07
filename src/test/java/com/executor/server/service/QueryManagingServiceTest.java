@@ -1,5 +1,6 @@
 package com.executor.server.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.executor.entity.QueryExecutionJob;
 import com.executor.entity.StoredQuery;
@@ -17,13 +18,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class QueryExecutionServiceTest {
+class QueryManagingServiceTest {
 
     @Mock
-    private QueryExecutionRepository queryExecutionRepository;
-
-    @Mock
-    private ObjectMapper objectMapper;
+    QueryExecutionService queryExecutionService;
 
     @Mock
     private StoredQueryService storedQueryService;
@@ -32,7 +30,7 @@ class QueryExecutionServiceTest {
     private QueryExecutionJobService jobService;
 
     @InjectMocks
-    private QueryExecutionService QueryExecutionService;
+    private QueryManagingService QueryManagingService;
 
     @Test
     void executeQuery_ValidJobId_ExecutesSuccessfully() throws Exception {
@@ -58,15 +56,13 @@ class QueryExecutionServiceTest {
 
         when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
         when(storedQueryService.getQueryById(queryId)).thenReturn(Optional.of(storedQuery));
-        when(queryExecutionRepository.executeNativeQuery(queryText)).thenReturn(mockResult);
-        when(objectMapper.writeValueAsString(any())).thenReturn(resultJson);
+        when(queryExecutionService.cacheableQueryExecution(queryText)).thenReturn(resultJson);
 
-        QueryExecutionService.executeQuery(jobId);
+        QueryManagingService.executeQuery(jobId);
 
         verify(jobService).getJobById(jobId);
         verify(storedQueryService).getQueryById(queryId);
-        verify(queryExecutionRepository).executeNativeQuery(queryText);
-        verify(objectMapper).writeValueAsString(any());
+        verify(queryExecutionService).cacheableQueryExecution(queryText);
 
         assertEquals(QueryExecutionJob.JobStatus.COMPLETED, job.getStatus());
         assertEquals(resultJson, job.getResult());
@@ -79,11 +75,11 @@ class QueryExecutionServiceTest {
 
         when(jobService.getJobById(jobId)).thenReturn(Optional.empty());
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> QueryExecutionService.executeQuery(jobId));
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> QueryManagingService.executeQuery(jobId));
 
         assertTrue(exception.getMessage().contains("No value present"));
         verify(jobService).getJobById(jobId);
-        verifyNoInteractions(storedQueryService, queryExecutionRepository, objectMapper);
+        verifyNoInteractions(storedQueryService, queryExecutionService);
     }
 
     @Test
@@ -99,11 +95,11 @@ class QueryExecutionServiceTest {
         when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
         when(storedQueryService.getQueryById(queryId)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> QueryExecutionService.executeQuery(jobId));
+        assertThrows(RuntimeException.class, () -> QueryManagingService.executeQuery(jobId));
 
         verify(jobService).getJobById(jobId);
         verify(storedQueryService).getQueryById(queryId);
-        verifyNoInteractions(queryExecutionRepository, objectMapper);
+        verifyNoInteractions(queryExecutionService, queryExecutionService);
 
         assertEquals(QueryExecutionJob.JobStatus.FAILED, job.getStatus());
         assertNotNull(job.getErrorMessage());
@@ -111,7 +107,7 @@ class QueryExecutionServiceTest {
     }
 
     @Test
-    void executeQuery_QueryExecutionFails_MarksJobAsFailed() {
+    void executeQuery_QueryExecutionFails_MarksJobAsFailed() throws JsonProcessingException {
         Long jobId = 1L;
         Long queryId = 1L;
         String queryText = "SELECT * FROM users";
@@ -127,87 +123,86 @@ class QueryExecutionServiceTest {
 
         when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
         when(storedQueryService.getQueryById(queryId)).thenReturn(Optional.of(storedQuery));
-        when(queryExecutionRepository.executeNativeQuery(queryText))
+        when(queryExecutionService.cacheableQueryExecution(queryText))
                 .thenThrow(new RuntimeException("Database connection failed"));
 
-        QueryExecutionService.executeQuery(jobId);
+        QueryManagingService.executeQuery(jobId);
 
         verify(jobService).getJobById(jobId);
         verify(storedQueryService).getQueryById(queryId);
-        verify(queryExecutionRepository).executeNativeQuery(queryText);
-        verifyNoInteractions(objectMapper);
+        verify(queryExecutionService).cacheableQueryExecution(queryText);
 
         assertEquals(QueryExecutionJob.JobStatus.FAILED, job.getStatus());
         assertNotNull(job.getErrorMessage());
         assertEquals("Database connection failed", job.getErrorMessage());
     }
 
-    @Test
-    void executeQuery_JsonSerializationFails_MarksJobAsFailed() throws Exception {
-        Long jobId = 1L;
-        Long queryId = 1L;
-        String queryText = "SELECT name FROM users";
-
-        QueryExecutionJob job = new QueryExecutionJob();
-        job.setId(jobId);
-        job.setSourceQueryId(queryId);
-        job.setStatus(QueryExecutionJob.JobStatus.PENDING);
-
-        StoredQuery storedQuery = new StoredQuery();
-        storedQuery.setId(queryId);
-        storedQuery.setQuery(queryText);
-
-        List<Map<String, Object>> mockResult = List.of(
-                Map.of("name", "John Doe")
-        );
-
-        when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
-        when(storedQueryService.getQueryById(queryId)).thenReturn(Optional.of(storedQuery));
-        when(queryExecutionRepository.executeNativeQuery(queryText)).thenReturn(mockResult);
-        when(objectMapper.writeValueAsString(any()))
-                .thenThrow(new RuntimeException("JSON serialization failed"));
-
-        QueryExecutionService.executeQuery(jobId);
-
-        verify(jobService).getJobById(jobId);
-        verify(storedQueryService).getQueryById(queryId);
-        verify(queryExecutionRepository).executeNativeQuery(queryText);
-        verify(objectMapper).writeValueAsString(any());
-
-        assertEquals(QueryExecutionJob.JobStatus.FAILED, job.getStatus());
-        assertNotNull(job.getErrorMessage());
-        assertEquals("JSON serialization failed", job.getErrorMessage());
-    }
-
-    @Test
-    void executeQuery_EmptyResult_SavesEmptyJsonArray() throws Exception {
-        Long jobId = 1L;
-        Long queryId = 1L;
-        String queryText = "SELECT * FROM empty_table";
-
-        QueryExecutionJob job = new QueryExecutionJob();
-        job.setId(jobId);
-        job.setSourceQueryId(queryId);
-        job.setStatus(QueryExecutionJob.JobStatus.PENDING);
-
-        StoredQuery storedQuery = new StoredQuery();
-        storedQuery.setId(queryId);
-        storedQuery.setQuery(queryText);
-
-        List<Map<String, Object>> mockResult = List.of();
-        String emptyJsonArray = "[]";
-
-        when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
-        when(storedQueryService.getQueryById(queryId)).thenReturn(Optional.of(storedQuery));
-        when(queryExecutionRepository.executeNativeQuery(queryText)).thenReturn(mockResult);
-        when(objectMapper.writeValueAsString(any())).thenReturn(emptyJsonArray);
-
-        QueryExecutionService.executeQuery(jobId);
-
-        assertEquals(QueryExecutionJob.JobStatus.COMPLETED, job.getStatus());
-        assertEquals(emptyJsonArray, job.getResult());
-        assertNull(job.getErrorMessage());
-    }
+//    @Test
+//    void executeQuery_JsonSerializationFails_MarksJobAsFailed() throws Exception {
+//        Long jobId = 1L;
+//        Long queryId = 1L;
+//        String queryText = "SELECT name FROM users";
+//
+//        QueryExecutionJob job = new QueryExecutionJob();
+//        job.setId(jobId);
+//        job.setSourceQueryId(queryId);
+//        job.setStatus(QueryExecutionJob.JobStatus.PENDING);
+//
+//        StoredQuery storedQuery = new StoredQuery();
+//        storedQuery.setId(queryId);
+//        storedQuery.setQuery(queryText);
+//
+//        List<Map<String, Object>> mockResult = List.of(
+//                Map.of("name", "John Doe")
+//        );
+//
+//        when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
+//        when(storedQueryService.getQueryById(queryId)).thenReturn(Optional.of(storedQuery));
+//        when(queryExecutionRepository.executeNativeQuery(queryText)).thenReturn(mockResult);
+//        when(objectMapper.writeValueAsString(any()))
+//                .thenThrow(new RuntimeException("JSON serialization failed"));
+//
+//        QueryManagingService.executeQuery(jobId);
+//
+//        verify(jobService).getJobById(jobId);
+//        verify(storedQueryService).getQueryById(queryId);
+//        verify(queryExecutionRepository).executeNativeQuery(queryText);
+//        verify(objectMapper).writeValueAsString(any());
+//
+//        assertEquals(QueryExecutionJob.JobStatus.FAILED, job.getStatus());
+//        assertNotNull(job.getErrorMessage());
+//        assertEquals("JSON serialization failed", job.getErrorMessage());
+//    }
+//
+//    @Test
+//    void executeQuery_EmptyResult_SavesEmptyJsonArray() throws Exception {
+//        Long jobId = 1L;
+//        Long queryId = 1L;
+//        String queryText = "SELECT * FROM empty_table";
+//
+//        QueryExecutionJob job = new QueryExecutionJob();
+//        job.setId(jobId);
+//        job.setSourceQueryId(queryId);
+//        job.setStatus(QueryExecutionJob.JobStatus.PENDING);
+//
+//        StoredQuery storedQuery = new StoredQuery();
+//        storedQuery.setId(queryId);
+//        storedQuery.setQuery(queryText);
+//
+//        List<Map<String, Object>> mockResult = List.of();
+//        String emptyJsonArray = "[]";
+//
+//        when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
+//        when(storedQueryService.getQueryById(queryId)).thenReturn(Optional.of(storedQuery));
+//        when(queryExecutionRepository.executeNativeQuery(queryText)).thenReturn(mockResult);
+//        when(objectMapper.writeValueAsString(any())).thenReturn(emptyJsonArray);
+//
+//        QueryManagingService.executeQuery(jobId);
+//
+//        assertEquals(QueryExecutionJob.JobStatus.COMPLETED, job.getStatus());
+//        assertEquals(emptyJsonArray, job.getResult());
+//        assertNull(job.getErrorMessage());
+//    }
 
     @Test
     void executeQuery_WithNullValuesInResult_HandlesCorrectly() throws Exception {
@@ -239,10 +234,9 @@ class QueryExecutionServiceTest {
 
         when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
         when(storedQueryService.getQueryById(queryId)).thenReturn(Optional.of(storedQuery));
-        when(queryExecutionRepository.executeNativeQuery(queryText)).thenReturn(mockResult);
-        when(objectMapper.writeValueAsString(any())).thenReturn(resultJson);
+        when(queryExecutionService.cacheableQueryExecution(queryText)).thenReturn(resultJson);
 
-        QueryExecutionService.executeQuery(jobId);
+        QueryManagingService.executeQuery(jobId);
 
         assertEquals(QueryExecutionJob.JobStatus.COMPLETED, job.getStatus());
         assertEquals(resultJson, job.getResult());

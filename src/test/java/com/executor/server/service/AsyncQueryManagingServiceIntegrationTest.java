@@ -15,10 +15,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-public class AsyncQueryExecutionServiceIntegrationTest {
+public class AsyncQueryManagingServiceIntegrationTest {
 
     @Autowired
-    private AsyncQueryExecutionService asyncQueryExecutionService; // Let Spring inject it
+    private AsyncQueryManagingService asyncQueryManagingService; // Let Spring inject it
 
     @Autowired
     private StoredQueryService storedQueryService;
@@ -59,7 +59,7 @@ public class AsyncQueryExecutionServiceIntegrationTest {
         QueryExecutionJob job = jobService.addJob(storedQuery.getId());
         Long jobId = job.getId();
 
-        asyncQueryExecutionService.executeQuery(jobId);
+        asyncQueryManagingService.executeQuery(jobId);
         QueryExecutionJob completedJob = waitForJobCompletion(jobId, 10);
 
         assertEquals(QueryExecutionJob.JobStatus.COMPLETED, completedJob.getStatus());
@@ -79,7 +79,7 @@ public class AsyncQueryExecutionServiceIntegrationTest {
         StoredQuery storedQuery = storedQueryService.addQuery(queryText);
         QueryExecutionJob job = jobService.addJob(storedQuery.getId());
 
-        asyncQueryExecutionService.executeQuery(job.getId());
+        asyncQueryManagingService.executeQuery(job.getId());
         QueryExecutionJob completedJob = waitForJobCompletion(job.getId(), 10);
 
         assertEquals(QueryExecutionJob.JobStatus.COMPLETED, completedJob.getStatus());
@@ -106,7 +106,7 @@ public class AsyncQueryExecutionServiceIntegrationTest {
         StoredQuery storedQuery = storedQueryService.addQuery(queryText);
         QueryExecutionJob job = jobService.addJob(storedQuery.getId());
 
-        asyncQueryExecutionService.executeQuery(job.getId());
+        asyncQueryManagingService.executeQuery(job.getId());
         QueryExecutionJob completedJob = waitForJobCompletion(job.getId(), 10);
 
         assertEquals(QueryExecutionJob.JobStatus.COMPLETED, completedJob.getStatus());
@@ -143,7 +143,7 @@ public class AsyncQueryExecutionServiceIntegrationTest {
         StoredQuery storedQuery = storedQueryService.addQuery(queryText);
         QueryExecutionJob job = jobService.addJob(storedQuery.getId());
 
-        asyncQueryExecutionService.executeQuery(job.getId());
+        asyncQueryManagingService.executeQuery(job.getId());
         QueryExecutionJob completedJob = waitForJobCompletion(job.getId(), 10);
 
         assertEquals(QueryExecutionJob.JobStatus.COMPLETED, completedJob.getStatus());
@@ -160,7 +160,7 @@ public class AsyncQueryExecutionServiceIntegrationTest {
         StoredQuery storedQuery = storedQueryService.addQuery(queryText);
         QueryExecutionJob job = jobService.addJob(storedQuery.getId());
 
-        asyncQueryExecutionService.executeQuery(job.getId());
+        asyncQueryManagingService.executeQuery(job.getId());
         QueryExecutionJob completedJob = waitForJobCompletion(job.getId(), 10);
 
         assertEquals(QueryExecutionJob.JobStatus.COMPLETED, completedJob.getStatus());
@@ -184,7 +184,7 @@ public class AsyncQueryExecutionServiceIntegrationTest {
         StoredQuery storedQuery = storedQueryService.addQuery(queryText);
         QueryExecutionJob job = jobService.addJob(storedQuery.getId());
 
-        asyncQueryExecutionService.executeQuery(job.getId());
+        asyncQueryManagingService.executeQuery(job.getId());
         QueryExecutionJob completedJob = waitForJobCompletion(job.getId(), 10);
 
         assertEquals(QueryExecutionJob.JobStatus.COMPLETED, completedJob.getStatus());
@@ -200,7 +200,7 @@ public class AsyncQueryExecutionServiceIntegrationTest {
         StoredQuery storedQuery = storedQueryService.addQuery(invalidQuery);
         QueryExecutionJob job = jobService.addJob(storedQuery.getId());
 
-        asyncQueryExecutionService.executeQuery(job.getId());
+        asyncQueryManagingService.executeQuery(job.getId());
         QueryExecutionJob failedJob = waitForJobCompletion(job.getId(), 10);
 
         assertEquals(QueryExecutionJob.JobStatus.FAILED, failedJob.getStatus());
@@ -226,8 +226,8 @@ public class AsyncQueryExecutionServiceIntegrationTest {
         QueryExecutionJob job1 = jobService.addJob(storedQuery1.getId());
         QueryExecutionJob job2 = jobService.addJob(storedQuery2.getId());
 
-        asyncQueryExecutionService.executeQuery(job1.getId());
-        asyncQueryExecutionService.executeQuery(job2.getId());
+        asyncQueryManagingService.executeQuery(job1.getId());
+        asyncQueryManagingService.executeQuery(job2.getId());
 
         QueryExecutionJob completedJob1 = waitForJobCompletion(job1.getId(), 10);
         QueryExecutionJob completedJob2 = waitForJobCompletion(job2.getId(), 10);
@@ -258,7 +258,7 @@ public class AsyncQueryExecutionServiceIntegrationTest {
         assertNull(job.getResult());
         assertNull(job.getErrorMessage());
 
-        asyncQueryExecutionService.executeQuery(job.getId());
+        asyncQueryManagingService.executeQuery(job.getId());
         QueryExecutionJob completedJob = waitForJobCompletion(job.getId(), 10);
 
         assertEquals(QueryExecutionJob.JobStatus.COMPLETED, completedJob.getStatus());

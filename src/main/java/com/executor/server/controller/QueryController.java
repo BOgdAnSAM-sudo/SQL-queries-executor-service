@@ -16,10 +16,10 @@ import java.util.Map;
 public class QueryController {
 
     private final StoredQueryService queryService;
-    private final AsyncQueryExecutionService executionService;
+    private final AsyncQueryManagingService executionService;
     private final QueryExecutionJobService jobService;
 
-    public QueryController(StoredQueryService queryService, AsyncQueryExecutionService executionService, QueryExecutionJobService jobService) {
+    public QueryController(StoredQueryService queryService, AsyncQueryManagingService executionService, QueryExecutionJobService jobService) {
         this.queryService = queryService;
         this.executionService = executionService;
         this.jobService = jobService;
