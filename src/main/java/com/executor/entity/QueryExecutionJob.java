@@ -1,5 +1,8 @@
 package com.executor.entity;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 public class QueryExecutionJob {
@@ -23,6 +26,10 @@ public class QueryExecutionJob {
     private String result;
 
     private String errorMessage;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     public String getErrorMessage() {
         return errorMessage;
@@ -62,5 +69,9 @@ public class QueryExecutionJob {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 }

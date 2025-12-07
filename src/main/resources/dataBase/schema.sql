@@ -15,7 +15,8 @@ CREATE TABLE QueryExecutionJob
     sourceQueryId   VARCHAR NOT NULL,
     status VARCHAR NOT NULL,
     result VARCHAR,
-    errorMessage VARCHAR
+    errorMessage VARCHAR,
+    createdAt Date
 );
 
 CREATE TABLE Titanic AS SELECT * FROM CSVREAD('src/main/resources/static/titanic.csv');
