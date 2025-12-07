@@ -3,6 +3,7 @@ package com.executor.server.service;
 import com.executor.entity.QueryExecutionJob;
 import com.executor.server.repository.QueryExecutionJobRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -34,5 +35,25 @@ public class QueryExecutionJobService {
 
     public Optional<QueryExecutionJob> getJobById(Long id) {
         return jobRepository.findById(id);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markJobRunning(Long jobId) {
+        QueryExecutionJob job = getJobById(jobId).orElseThrow();
+        job.setStatus(QueryExecutionJob.JobStatus.RUNNING);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markJobCompleted(Long jobId, String result) {
+        QueryExecutionJob job = getJobById(jobId).orElseThrow();
+        job.setResult(result);
+        job.setStatus(QueryExecutionJob.JobStatus.COMPLETED);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markJobFailed(Long jobId, String errorMessage) {
+        QueryExecutionJob job = getJobById(jobId).orElseThrow();
+        job.setErrorMessage(errorMessage);
+        job.setStatus(QueryExecutionJob.JobStatus.FAILED);
     }
 }

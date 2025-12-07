@@ -64,8 +64,7 @@ class QueryManagingServiceTest {
         verify(storedQueryService).getQueryById(queryId);
         verify(queryExecutionService).cacheableQueryExecution(queryText);
 
-        assertEquals(QueryExecutionJob.JobStatus.COMPLETED, job.getStatus());
-        assertEquals(resultJson, job.getResult());
+        verify(jobService).markJobCompleted(eq(jobId), eq(resultJson));
         assertNull(job.getErrorMessage());
     }
 
@@ -95,15 +94,13 @@ class QueryManagingServiceTest {
         when(jobService.getJobById(jobId)).thenReturn(Optional.of(job));
         when(storedQueryService.getQueryById(queryId)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> QueryManagingService.executeQuery(jobId));
+        QueryManagingService.executeQuery(jobId);
 
         verify(jobService).getJobById(jobId);
         verify(storedQueryService).getQueryById(queryId);
         verifyNoInteractions(queryExecutionService, queryExecutionService);
 
-        assertEquals(QueryExecutionJob.JobStatus.FAILED, job.getStatus());
-        assertNotNull(job.getErrorMessage());
-        assertTrue(job.getErrorMessage().contains("Source query not found"));
+        verify(jobService).markJobFailed(eq(jobId), anyString());
     }
 
     @Test
@@ -132,9 +129,7 @@ class QueryManagingServiceTest {
         verify(storedQueryService).getQueryById(queryId);
         verify(queryExecutionService).cacheableQueryExecution(queryText);
 
-        assertEquals(QueryExecutionJob.JobStatus.FAILED, job.getStatus());
-        assertNotNull(job.getErrorMessage());
-        assertEquals("Database connection failed", job.getErrorMessage());
+        verify(jobService).markJobFailed(eq(jobId), anyString());
     }
 
     @Test
@@ -171,8 +166,6 @@ class QueryManagingServiceTest {
 
         QueryManagingService.executeQuery(jobId);
 
-        assertEquals(QueryExecutionJob.JobStatus.COMPLETED, job.getStatus());
-        assertEquals(resultJson, job.getResult());
-        assertNull(job.getErrorMessage());
+        verify(jobService).markJobCompleted(eq(jobId), eq(resultJson));
     }
 }

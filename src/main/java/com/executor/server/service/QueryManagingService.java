@@ -3,7 +3,6 @@ package com.executor.server.service;
 import com.executor.entity.QueryExecutionJob;
 import com.executor.entity.StoredQuery;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -19,30 +18,24 @@ public class QueryManagingService {
         this.jobService = jobService;
     }
 
-    @Transactional
-    protected void executeQuery(Long jobId){
-        QueryExecutionJob job = jobService.getJobById(jobId).orElseThrow();
-        job.setStatus(QueryExecutionJob.JobStatus.RUNNING);
+    protected void executeQuery(Long jobId) {
+        jobService.markJobRunning(jobId);
 
+        QueryExecutionJob job = jobService.getJobById(jobId).orElseThrow();
         Optional<StoredQuery> storedQuery = storedQueryService.getQueryById(job.getSourceQueryId());
 
         if (storedQuery.isEmpty()) {
-            String errorMessage = "Source query not found with ID: " + job.getSourceQueryId();
-            job.setStatus(QueryExecutionJob.JobStatus.FAILED);
-            job.setErrorMessage(errorMessage);
-            throw new QueryExecutionJobException(errorMessage);
+            jobService.markJobFailed(jobId, "Source query not found");
+            return;
         }
 
         String query = storedQuery.get().getQuery();
 
         try {
-            job.setResult(queryExecutionService.cacheableQueryExecution(query));
-            job.setStatus(QueryExecutionJob.JobStatus.COMPLETED);
-
+            String result = queryExecutionService.cacheableQueryExecution(query);
+            jobService.markJobCompleted(jobId, result);
         } catch (Exception e) {
-//            If anything goes wrong, mark as FAILED
-            job.setStatus(QueryExecutionJob.JobStatus.FAILED);
-            job.setErrorMessage(e.getMessage());
+            jobService.markJobFailed(jobId, e.getMessage());
         }
     }
 
