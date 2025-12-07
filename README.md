@@ -94,20 +94,9 @@ The application is built using a three-tier architecture (Controller, Service, R
 
 #### To improve performance for repeated queries, the application can leverage Spring Boot's declarative caching mechanism. This avoids re-executing queries for which the result has already been computed.
 
-- Implementation
-	- Enable Caching: Add the @EnableCaching annotation to the main application class to activate Spring's caching functionality.
-	- Create New Method And Annotate: In QueryExecutionService, create a new method that takes the query string, executes it, and returns the result. This is the method to be cached. Add the @Cacheable("queryResults").
-	- Update the executeQuery Method: Now, modify existing **executeQuery** method to call new fetchQueryResult method instead of calling the repository directly.
-
-
-- Potential Issues
-	#### While simple, this approach has considerations for a production environment:
-
-	- Memory Consumption: The default cache is a simple in-memory map. If many unique queries with large results are executed, the cache can grow very large, consuming significant application memory and potentially leading to an OutOfMemoryError.
-
-	- No Automatic Eviction: By default, cached items are stored forever. Without a strategy to remove old or infrequently used entries (cache eviction), the memory usage will only ever increase.
-
-	- Data Staleness: In a scenario where the underlying data could change, the cache would serve outdated results. While not an issue for this assignment's static dataset, it's a critical problem in most real-world applications that requires a cache invalidation strategy.
+## Done
+### Possible improvments
+Add caching provider such as Redis and set lifetime of cache to resolve cache staleness.
 
 ### 3. Other enhancements
 
