@@ -94,14 +94,14 @@ The application is built using a three-tier architecture (Controller, Service, R
 
 #### To improve performance for repeated queries, the application can leverage Spring Boot's declarative caching mechanism. This avoids re-executing queries for which the result has already been computed.
 
-## Done
-### Possible improvments
+### Done
+#### Possible improvments
 Add caching provider such as Redis and set lifetime of cache to resolve cache staleness.
 
 ### 3. Other enhancements
 
 - Security: Incorporating Spring Security would allow for role-based access control, ensuring only authorized users can execute queries or view results.
 
-- Data Lifecycle Management: A cleanup mechanism (e.g., a scheduled job) could be added to automatically delete old QueryExecutionJob entities from the database to save memory.
+- DONE Data Lifecycle Management: A cleanup mechanism (e.g., a scheduled job) could be added to automatically delete old QueryExecutionJob entities from the database to save memory.
 
 - Database Strategy: For a production system, it would be beneficial to use a persistent database (like PostgreSQL) for long-term data (StoredQuery entities) and a fast, in-memory database (like Redis) for the transient QueryExecutionJob data.
