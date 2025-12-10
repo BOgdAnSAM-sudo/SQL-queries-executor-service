@@ -31,6 +31,10 @@ public class QueryExecutionJob {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id") // Matches the new SQL column we added
+    private User owner;
+
     public String getErrorMessage() {
         return errorMessage;
     }
@@ -73,5 +77,13 @@ public class QueryExecutionJob {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
     }
 }
