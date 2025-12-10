@@ -16,6 +16,10 @@ public class StoredQuery {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id") // Matches the new SQL column we added
+    private User owner;
+
     public StoredQuery() {
         this.createdAt = LocalDateTime.now();
     }
@@ -47,5 +51,13 @@ public class StoredQuery {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
     }
 }
